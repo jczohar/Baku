@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#E5195E">
+<meta name="description" content="מדריך באקו, אזרבייג׳ן בעברית: מפה, אתרים, מלונות, תחבורה ומטרו, מסעדות, קניות, שווקים, טיפים ומסלולים">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="באקו">
+<title>באקו – מדריך למטייל</title>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <img class="logo" src="icons/icon-192.png" alt="">
+  <div class="grow"><h1>באקו · Bakı</h1><div class="sub">יוצר: <span class="gold">יעקב זוהר</span></div></div>
+  <button id="installBtn" type="button">התקנה</button>
+  <button class="hb" id="sosBtn" type="button" data-sos="1" aria-label="אני אבוד" title="אני אבוד">🆘</button>
+  <button class="hb" id="refreshBtn" type="button" data-refresh="1" aria-label="רענון מידע והמלצות" title="רענון מידע והמלצות">🔄</button>
+  <button class="hb" id="menuBtn" type="button" aria-label="תפריט">☰</button>
+</header>
+<div id="menubar" role="navigation" aria-label="תפריט ראשי"></div>
+<main id="view"></main>
+<nav id="nav"></nav>
+<div id="drawerBg"></div>
+<aside id="drawer" aria-label="תפריט"></aside>
+<div id="sheetBg"></div>
+<div id="sheet" role="dialog" aria-modal="true"></div>
+<div id="toast" role="status"></div>
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="content.js"></script>
+<script src="art.js"></script>
+<script src="metro.js"></script>
+<script src="metrodata.js"></script>
+<script src="app.js"></script>
+<script src="map.js"></script>
+<script src="itin.js"></script>
+<script src="v2.js"></script>
+</body>
+</html>
