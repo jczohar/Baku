@@ -235,3 +235,6 @@ details.more{margin:8px 0}details.more summary{font-weight:700;cursor:pointer;co
 .cmap.fs{position:fixed;inset:0;z-index:80;height:100vh!important;min-height:100vh!important;border-radius:0;margin:0}
 .cmap.fs iframe{height:100%}
 .btn.big{display:block;width:100%;text-align:center;padding:14px;font-size:17px;margin:8px 0}
+.fs-exit{position:fixed;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:90;background:rgba(20,16,40,.92);color:#fff;border:0;border-radius:24px;padding:12px 20px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.45);white-space:nowrap}
+.fs-exit:active{transform:translateX(-50%) scale(.97)}
+.cmap.fs{z-index:80}

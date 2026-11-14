@@ -308,7 +308,28 @@ document.addEventListener('click',function(ev){
     store.set('myh',state.myh);closeSheet();render();toast('המלון נשמר.');return;}
   if(d.cmm){state.cm.mode=d.cmm;rerender();return;}
   if(d.cmq){var z=d.cmq.split('|');state.cm.q=z[0];state.cm.label=z[1];rerender();return;}
-  if(d.fsmap!==undefined){var cm=$('.cmap');if(cm){cm.classList.toggle('fs');t.textContent=cm.classList.contains('fs')?'✕ יציאה ממסך מלא':'⛶ מסך מלא';}}
+  if(d.fsmap!==undefined){
+    var cm=$('.cmap');if(!cm)return;
+    var on=!cm.classList.contains('fs');
+    cm.classList.toggle('fs',on);
+    var existing=cm.querySelector('.fs-exit');
+    if(on){
+      if(!existing){
+        var btn=document.createElement('button');
+        btn.className='fs-exit';
+        btn.type='button';
+        btn.setAttribute('data-fsmap','1');
+        btn.setAttribute('aria-label','יציאה ממסך מלא');
+        btn.textContent='✕ יציאה ממסך מלא';
+        cm.appendChild(btn);
+      }
+      if(t.classList.contains('chip'))t.textContent='⛶ מסך מלא';
+    }else{
+      if(existing)existing.remove();
+      document.querySelectorAll('[data-fsmap]').forEach(function(b){if(b.classList.contains('chip'))b.textContent='⛶ מסך מלא';});
+    }
+    return;
+  }
 });
 document.getElementById('header-sos')&&0;
 render();
