@@ -91,7 +91,7 @@ var WX={0:['☀️','בהיר'],1:['🌤️','בהיר ברובו'],2:['⛅','מ
 function wxGet(cb){
   var c=store.get('wx',null);
   if(c&&Date.now()-c.t<90*60*1000){cb(c.d,c.cur,c.t,false);return;}
-  fetch('https://api.open-meteo.com/v1/forecast?latitude=40.37&longitude=49.85&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&timezone=Asia%2FBaku&forecast_days=5').then(function(r){return r.json();}).then(function(j){
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=40.37&longitude=49.85&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&timezone=Asia%2FBaku&forecast_days=10').then(function(r){return r.json();}).then(function(j){
     store.set('wx',{t:Date.now(),d:j.daily,cur:j.current});cb(j.daily,j.current,Date.now(),false);
   }).catch(function(){if(c)cb(c.d,c.cur,c.t,true);else cb(null,null,null,true);});
 }
@@ -103,7 +103,7 @@ function wxHtml(d,cur,t,old){
     h+='<div class="wxnow"><div class="wxi big">'+cw[0]+'</div><div><div class="small mute">עכשיו</div><b class="wxtemp">'+Math.round(cur.temperature_2m)+'°</b><div class="small">'+esc(cw[1])+(cur.wind_speed_10m?' · 💨 '+Math.round(cur.wind_speed_10m)+' קמ״ש':'')+(cur.relative_humidity_2m?' · 💧 '+cur.relative_humidity_2m+'%':'')+'</div></div></div>';
   }
   h+='<div class="wxrow">';
-  d.time.forEach(function(day,i){
+  d.time.slice(0,5).forEach(function(day,i){
     var w=WX[d.weather_code[i]]||['🌡️',''],dt=new Date(day+'T12:00:00');
     h+='<div class="wxd"><div class="small">'+(i===0?'היום':'יום '+DAYN[dt.getDay()])+'</div><div class="wxi">'+w[0]+'</div><b>'+Math.round(d.temperature_2m_max[i])+'°</b><div class="mute small">'+Math.round(d.temperature_2m_min[i])+'°</div><div class="small">'+esc(w[1])+'</div>'+(d.precipitation_sum[i]>=1?'<div class="small">☔ '+Math.round(d.precipitation_sum[i])+' מ״מ</div>':'')+(d.precipitation_probability_max&&d.precipitation_probability_max[i]>=40?'<div class="small mute">סיכוי גשם '+d.precipitation_probability_max[i]+'%</div>':'')+'</div>';
   });

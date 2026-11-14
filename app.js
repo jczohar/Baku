@@ -314,7 +314,7 @@ function speakAz(txt){
   }catch(e){toast('לא הצלחתי להשמיע');}
 }
 document.addEventListener('click',function(ev){
-  var t=ev.target.closest('[data-tab],[data-go],[data-st],[data-f],[data-v],[data-ready],[data-from],[data-to],[data-sub],[data-sf],[data-hf],[data-sight],[data-fav],[data-onmap],[data-hmap],[data-refresh],[data-lay],[data-mz],[data-it],[data-itgen],[data-itcopy],[data-lyr],[data-locate],[data-speak],#swap,#closeSheet,#sheetBg,#closeDrawer,#drawerBg,#menuBtn');
+  var t=ev.target.closest('[data-tab],[data-go],[data-st],[data-f],[data-v],[data-ready],[data-from],[data-to],[data-sub],[data-sf],[data-hf],[data-sight],[data-fav],[data-onmap],[data-hmap],[data-refresh],[data-lay],[data-mz],[data-it],[data-itgen],[data-itcopy],[data-itsave],[data-itload],[data-itdel],[data-itrm],[data-lyr],[data-locate],[data-speak],#swap,#closeSheet,#sheetBg,#closeDrawer,#drawerBg,#menuBtn');
   if(!t) return;
   if(DRAG.moved&&t.closest('#mapWrap')){DRAG.moved=false;return;}
   var d=t.dataset;
@@ -351,6 +351,10 @@ document.addEventListener('click',function(ev){
   if(d.it!==undefined){itToggle(t);return;}
   if(d.itgen!==undefined){itGenerate();return;}
   if(d.itcopy!==undefined){itCopy();return;}
+  if(d.itsave!==undefined){itSaveCurrent();return;}
+  if(d.itload!==undefined){itLoadSaved(+d.itload);return;}
+  if(d.itdel!==undefined){itDeleteSaved(+d.itdel);return;}
+  if(d.itrm!==undefined){var p=d.itrm.split(':');itRemoveItem(+p[0],+p[1]);return;}
 });
 document.addEventListener('change',function(ev){
   var el=ev.target;
@@ -375,6 +379,17 @@ window.addEventListener('appinstalled',function(){$('#installBtn').style.display
 if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
 }
+/* מופע יחיד: התמקדות בעותק שכבר פתוח (PWA מותקן + launch_handler) */
+if('launchQueue' in window){
+  window.launchQueue.setConsumer(function(){ try{window.focus();}catch(e){} });
+}
+(function(){
+  try{
+    var ch=new BroadcastChannel('baku-guide-singleton');
+    ch.onmessage=function(ev){ if(ev.data==='ping'){ try{window.focus();}catch(e){} ch.postMessage('pong'); } };
+    ch.postMessage('ping');
+  }catch(e){}
+})();
 if(window.speechSynthesis){
   window.speechSynthesis.getVoices();
   window.speechSynthesis.onvoiceschanged=function(){window.speechSynthesis.getVoices();};

@@ -3,7 +3,9 @@ function todayISO(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth
 var IT_DEF={days:3,start:'',adults:2,kids:0,kidAge:'6_12',seniors:0,hotel:'fs',pace:'normal',walk:'mid',visit:'couple',budget:'mid',mobility:'none',arrive:'afternoon',depart:'afternoon',interests:[]};
 state.it=Object.assign({},IT_DEF,store.get('it',{}));
 if(!state.it.start)state.it.start=todayISO();
-state.itOut=null;
+state.itOut=store.get('itOut',null);
+if(state.itOut&&state.itOut.days){state.itOut.days.forEach(function(d){if(typeof d.date==='string')d.date=new Date(d.date);});}
+state.itSaved=store.get('itSaved',[]); /* [{id,name,saved,data}] */
 var IT_INT=[['history','🏰 היסטוריה'],['photo','📷 צילום ונופים'],['food','🍽️ אוכל'],['shopping','🛍️ קניות'],['nature','🌿 טבע'],['culture','🎨 תרבות ואמנות'],['romance','💞 רומנטי'],['night','🌙 ערב ולילה'],['relax','☕ רגוע']];
 var AREA_OF_HOTEL={fs:'sea',fm:'hill',hl:'sea',jw:'center',sh:'sea',mb:'sea',b19:'old',sc:'center',ag:'sea'};
 var HM={old:'old',sea:'sea',center:'center',hill:'hill'};
@@ -36,9 +38,16 @@ function viewItin(){
   function sel(id,opts,val){return '<select data-itf="'+id+'">'+opts.map(function(o){return '<option value="'+o[0]+'"'+(String(val)===String(o[0])?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';}
   function num(id,min,max){return '<input type="number" data-itf="'+id+'" min="'+min+'" max="'+max+'" value="'+s[id]+'" inputmode="numeric">';}
   var hotelOpts=[['area:old','עדיין לא בחרתי: העיר העתיקה'],['area:sea','עדיין לא בחרתי: הטיילת והים'],['area:center','עדיין לא בחרתי: מרכז העיר'],['area:hill','עדיין לא בחרתי: הגבעה (נוף)']].concat(HOTELS.map(function(x){return [x.id,x.n+' ('+x.stars+'★)'];}));
-  var h='<h2 class="first">מסלולים מומלצים</h2><div class="mute small">ענו על כמה שאלות והמסלול יותאם לכם: מי מטייל, איפה המלון, כמה ללכת ומה מעניין אתכם.</div>';
+  var h='<h2 class="first">מסלולים מומלצים</h2><div class="mute small">ענו על כמה שאלות והמסלול יותאם לכם: מי מטייל, איפה המלון, כמה ללכת ומה מעניין אתכם. אפשר לשמור ולערוך מסלולים.</div>';
+  if(state.itSaved&&state.itSaved.length){
+    h+='<div class="card"><b>📁 מסלולים שמורים</b><div class="small mute">לחצו לטעינה. אפשר למחוק.</div>';
+    state.itSaved.forEach(function(sv,i){
+      h+='<div class="row" style="margin-top:8px;gap:8px;align-items:center"><button class="btn sm grow" data-itload="'+i+'" style="text-align:start">'+esc(sv.name)+' <span class="mute small">('+esc(sv.saved)+')</span></button><button class="btn sm sec" data-itdel="'+i+'" aria-label="מחיקה">🗑️</button></div>';
+    });
+    h+='</div>';
+  }
   h+='<div class="card wiz">'+
-   '<div class="grid2"><div><label>כמה ימים</label>'+sel('days',[1,2,3,4,5,6,7,8,9,10].map(function(n){return [n,n+(n===1?' יום':' ימים')];}),s.days)+'</div><div><label>תאריך הגעה</label><input type="date" data-itf="start" value="'+esc(s.start)+'"></div></div>'+
+   '<div class="grid2"><div><label>כמה ימים</label>'+sel('days',[1,2,3,4,5,6,7,8,9,10].map(function(n){return [n,n+(n===1?' יום':' ימים')];}),s.days)+'</div><div><label>תאריך הגעה</label><input type="date" data-itf="start" value="'+esc(s.start)+'" lang="he-IL" min="2024-01-01" max="2035-12-31"></div></div>'+
    '<div class="grid3"><div><label>מבוגרים</label>'+num('adults',1,10)+'</div><div><label>ילדים</label>'+num('kids',0,8)+'</div><div><label>מבוגרים 65+</label>'+num('seniors',0,10)+'</div></div>'+
    (s.kids>0?'<label>גיל הילדים</label>'+sel('kidAge',[['u6','עד גיל 6 (גם עגלה)'],['6_12','6 עד 12'],['teen','נוער']],s.kidAge):'')+
    '<label>המלון או אזור הלינה</label>'+sel('hotel',hotelOpts,s.hotel)+
@@ -159,6 +168,7 @@ function itGenerate(){
     d.endT=t;
   });
   state.itOut={days:days,dropped:dropped,hk:hk,hotel:hotelObj(),sets:JSON.parse(JSON.stringify(s)),gen:dmy(new Date())};
+  itPersistOut();
   var o=$('#itout');if(o){o.innerHTML=renderItin(state.itOut);o.scrollIntoView({behavior:'smooth'});}
 }
 function renderItin(o){
@@ -194,13 +204,15 @@ function renderItin(o){
     if(d.note)h+='<div class="small mute">'+esc(d.note)+'</div>';
     if(!d.timeline.length&&!d.note)h+='<div class="small mute">יום חופשי: מנוחה, קניות או בית קפה. אפשר להחליט במקום.</div>';
     var firstLeg=d.timeline.filter(function(z){return z.x;})[0];
+    var itemIdx=0;
     d.timeline.forEach(function(z){
       if(z.lunch){h+='<div class="tl meal"><span class="tm">'+hhmm(z.t)+'</span><div class="tb"><b>🍴 ארוחת צהריים</b><div class="small">הצעה: '+esc(z.rest.n)+' · '+esc(z.rest.cat)+' ('+esc(z.rest.area)+')</div></div></div>';return;}
-      var x=z.x;
+      var x=z.x, myIdx=itemIdx++;
       h+='<div class="tl"><span class="tm">'+hhmm(z.t)+'</span><div class="tb">'+
        (z.leg>0&&!z.first?'<div class="leg small mute">'+(z.leg<=10?'🚶 ':'🚕 ')+'עד '+z.leg+' דקות, '+esc(z.mode)+'</div>':'')+
        (z.first&&z.leg>0?'<div class="leg small mute">🚕 מהמלון: כ‑'+z.leg+' דקות, '+esc(z.mode)+'</div>':'')+
-       '<div class="row" data-sight="'+x.id+'" style="cursor:pointer"><div class="thumb">'+ART.svg(x.art,x.col)+'</div><div class="grow"><b>'+esc(x.he)+'</b><div class="ltr small mute">'+esc(x.en)+' · '+esc(x.az)+'</div><div class="small">כ‑'+x.dur+' שעות · '+esc(effTxt(x.eff).split(' (')[0])+'</div></div></div>'+
+       '<div class="row"><div class="row grow" data-sight="'+x.id+'" style="cursor:pointer;min-width:0"><div class="thumb">'+ART.svg(x.art,x.col)+'</div><div class="grow"><b>'+esc(x.he)+'</b><div class="ltr small mute">'+esc(x.en)+' · '+esc(x.az)+'</div><div class="small">כ‑'+x.dur+' שעות · '+esc(effTxt(x.eff).split(' (')[0])+'</div></div></div>'+
+       '<button class="btn sm sec" data-itrm="'+d.i+':'+myIdx+'" title="הסר מהמסלול" type="button">✕</button></div>'+
        (x.tip?'<div class="small mute">💡 '+esc(x.tip)+'</div>':'')+(z.late?'<div class="small warnt">⚠️ בשעה הזו כבר עלול להיות חשוך. אפשר להקדים.</div>':'')+
        (z.first&&x.st&&o.hotel&&o.hotel.st&&o.hotel.st!==x.st&&SBY[x.st]&&SBY[o.hotel.st]?'<div class="small"><button class="pill btnlike" data-from="s:'+o.hotel.st+'">🚇 אפשר גם מטרו: מ'+esc(SBY[o.hotel.st].he)+'</button></div>':'')+
        '</div></div>';
@@ -208,11 +220,57 @@ function renderItin(o){
     if(d.dinner&&(d.items.length||d.i===0))h+='<div class="tl meal"><span class="tm">'+hhmm(Math.max(d.endT+30,19*60))+'</span><div class="tb"><b>🌙 ארוחת ערב וטיול ערב</b><div class="small">הצעה: '+esc(d.dinner.n)+' · '+esc(d.dinner.cat)+'. אחר כך טיול רגוע בכיכר המזרקות או בטיילת (שטוח).</div></div></div>';
     h+='</div>';
   });
-  if(o.dropped.length)h+='<div class="card small"><b>לא נכנסו בגלל מספר הימים:</b> '+o.dropped.map(function(x){return esc(x.he);}).join(', ')+'. אפשר להוסיף יום, או לשנות את תחומי העניין.</div>';
+  if(o.dropped&&o.dropped.length)h+='<div class="card small"><b>לא נכנסו בגלל מספר הימים:</b> '+o.dropped.map(function(x){return esc(x.he);}).join(', ')+'. אפשר להוסיף יום, או לשנות את תחומי העניין.</div>';
   h+='<div class="card small"><b>אם יורד גשם:</b> מרכזי קניות (Park Bulvar, Port Baku, Deniz Mall), מרכז היידר אלייב, מוזיאון השטיחים, בתי קפה בעיר העתיקה וספא במלון.</div>';
-  h+='<div class="row wrap"><button class="btn sec" data-itcopy="1">📋 העתקת המסלול</button><button class="btn sec" data-itgen="1">🔄 בנייה מחדש</button></div>';
-  h+='<div class="foot">המסלול הוא הצעה לפי כללים פשוטים (קרבה בין אתרים, זמן ביקור, מאמץ והרכב הנוסעים). זמני הנסיעה משוערים.</div>';
+  h+='<div class="card"><label>שם לשמירת המסלול</label><input type="text" id="itSaveName" placeholder="למשל: משפחה נובמבר" value="" style="width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:16px;font-family:inherit"><div class="row wrap" style="margin-top:10px"><button class="btn" data-itsave="1">💾 שמירת מסלול</button><button class="btn sec" data-itcopy="1">📋 העתקה</button><button class="btn sec" data-itgen="1">🔄 בנייה מחדש</button></div></div>';
+  h+='<div class="foot">לחצו ✕ ליד אתר כדי להסיר אותו. שמירה נשמרת במכשיר. תחזית מוצגת לימים שיש עליהם נתונים.</div>';
   return h;
+}
+function itPersistOut(){try{store.set('itOut',state.itOut);}catch(e){}}
+function itRemoveItem(dayI, itemI){
+  var o=state.itOut;if(!o||!o.days[dayI])return;
+  var d=o.days[dayI], count=0, newTl=[];
+  d.timeline.forEach(function(z){
+    if(z.lunch){newTl.push(z);return;}
+    if(count===itemI){count++;return;}
+    newTl.push(z);count++;
+  });
+  d.timeline=newTl;
+  d.items=d.timeline.filter(function(z){return z.x;}).map(function(z){return {x:z.x,cl:z.cl};});
+  itPersistOut();
+  var el=$('#itout');if(el)el.innerHTML=renderItin(o);
+  toast('הוסר מהמסלול');
+}
+function itSaveCurrent(){
+  var o=state.itOut;if(!o){toast('אין מסלול לשמירה');return;}
+  var name=(($('#itSaveName')||{}).value||'').trim();
+  if(!name){toast('הקלידו שם למסלול');return;}
+  state.itSaved=state.itSaved||[];
+  /* שמירת תאריכים כמחרוזת ISO ליציבות */
+  var copy=JSON.parse(JSON.stringify(o,function(k,v){if(v instanceof Date)return v.toISOString();return v;}));
+  state.itSaved.unshift({id:'it_'+Date.now(),name:name,saved:dmy(new Date()),data:copy});
+  if(state.itSaved.length>12)state.itSaved=state.itSaved.slice(0,12);
+  store.set('itSaved',state.itSaved);
+  toast('המסלול נשמר: '+name);
+  render();
+}
+function itLoadSaved(i){
+  var sv=(state.itSaved||[])[i];if(!sv)return;
+  state.itOut=JSON.parse(JSON.stringify(sv.data));
+  state.itOut.days.forEach(function(d){if(typeof d.date==='string')d.date=new Date(d.date);});
+  itPersistOut();
+  if(sv.data.sets){state.it=Object.assign({},state.it,sv.data.sets);store.set('it',state.it);}
+  toast('נטען: '+sv.name);
+  render();
+  setTimeout(function(){var el=$('#itout');if(el)el.scrollIntoView({behavior:'smooth'});},80);
+}
+function itDeleteSaved(i){
+  if(!state.itSaved||!state.itSaved[i])return;
+  var n=state.itSaved[i].name;
+  state.itSaved.splice(i,1);
+  store.set('itSaved',state.itSaved);
+  toast('נמחק: '+n);
+  render();
 }
 function itCopy(){
   var o=state.itOut;if(!o)return;

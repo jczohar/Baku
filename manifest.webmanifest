@@ -11,6 +11,9 @@
   "orientation": "portrait",
   "background_color": "#3A0CA3",
   "theme_color": "#E5195E",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
   "icons": [
     {
       "src": "icons/icon-192.png",
