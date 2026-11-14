@@ -209,6 +209,14 @@ table.facts td a{word-break:break-all}
 #menubar::-webkit-scrollbar{display:none}
 #menubar button{flex:none;border:0;border-radius:16px;padding:7px 12px;font-size:14px;font-weight:600;background:var(--bg);color:var(--ink);cursor:pointer;font-family:inherit;white-space:nowrap}
 #menubar button.on{background:linear-gradient(135deg,#7B2FF7,#E5195E);color:#fff}
+/* פס גלילה דק לתפריט – רק במחשב */
+@media (hover:hover) and (pointer:fine){
+  #menubar{scrollbar-width:thin;scrollbar-color:#C5B0E0 transparent;padding-bottom:4px}
+  #menubar::-webkit-scrollbar{display:block;height:6px}
+  #menubar::-webkit-scrollbar-track{background:transparent}
+  #menubar::-webkit-scrollbar-thumb{background:#C5B0E0;border-radius:6px}
+  #menubar::-webkit-scrollbar-thumb:hover{background:#9B7BC7}
+}
 .hist{background:var(--bg);border-radius:12px;padding:10px 12px;margin:8px 0;font-size:14px}.hist b{display:block;margin-bottom:3px}
 /* v2 */
 .mbar{display:flex;gap:8px;margin:-6px 0 14px}.mb{flex:1;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:9px 6px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
