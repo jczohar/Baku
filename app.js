@@ -24,6 +24,7 @@ var MENU = [
  ['markets','🧺','שווקים','Bazarlar','linear-gradient(135deg,#7BC043,#2E7D32)'],
  ['tips','💡','טיפים','Məsləhətlər','linear-gradient(135deg,#FDC830,#F37335)'],
  ['itin','🧭','מסלולים מומלצים','Marşrutlar','linear-gradient(135deg,#1FA2FF,#12D8FA 60%,#A6FFCB)'],
+ ['events','🎭','אירועים ותרבות','Tədbirlər','linear-gradient(135deg,#FF6B6B,#C44569)'],
  ['info','🎒','מידע חיוני לתייר','Vacib məlumat','linear-gradient(135deg,#5B86E5,#36D1DC)']
 ];
 function menuItem(k){for(var i=0;i<MENU.length;i++)if(MENU[i][0]===k)return MENU[i];}
@@ -203,10 +204,34 @@ function viewTips(){
   h+=C.tips.map(function(t,i){return '<details class="card"'+(i===0?' open':'')+'><summary><span class="emo2">'+t.e+'</span> '+esc(t.t)+'</summary>'+ul(t.items)+'</details>';}).join('');
   return h;
 }
+function viewEvents(){
+  var h='<h2 class="first">אירועים, קונצרטים וספורט</h2>';
+  h+='<div class="mute small">אין לי מקור חי ומאומת לרשימת אירועים בזמן אמת. להלן האתרים הרשמיים והמומלצים לרכישת כרטיסים וללוח אירועים עדכני בבאקו:</div>';
+  h+='<div class="card"><b>🎟️ רכישת כרטיסים ולוח אירועים</b><div class="row wrap" style="margin-top:8px">'+
+    '<a class="btn sm" target="_blank" rel="noopener" href="https://iticket.az/en/events">iTicket – כל האירועים</a>'+
+    '<a class="btn sm sec" target="_blank" rel="noopener" href="https://www.bandsintown.com/c/baku-azerbaijan">Bandsintown – הופעות</a>'+
+    '<a class="btn sm sec" target="_blank" rel="noopener" href="https://www.ticketmaster.az/">Ticketmaster Azerbaijan</a>'+
+    '</div><div class="small mute" style="margin-top:8px">iTicket הוא הפלטפורמה המרכזית בבאקו לקונצרטים, תיאטרון, ספורט ואירועי תרבות.</div></div>';
+  h+='<div class="card"><b>🏟️ מקומות מרכזיים</b><ul class="tips small">'+
+    '<li><b>Heydar Aliyev Palace / Center</b> – קונצרטים ואירועי תרבות גדולים</li>'+
+    '<li><b>Baku Olympic Stadium</b> – משחקי כדורגל ואירועי ספורט</li>'+
+    '<li><b>Azerbaijan State Academic Opera and Ballet Theatre</b> – אופרה ובalet</li>'+
+    '<li><b>Philharmonic Hall</b> – קונצרטים קלאסיים</li>'+
+    '<li><b>Fountain Square & Nizami</b> – אירועי רחוב והופעות קטנות בערב</li>'+
+    '</ul></div>';
+  h+='<div class="card tipbox"><b>💡 טיפ</b><div class="small">בדקו אתרים אלה כמה ימים לפני הנסיעה. בעונת החגים והקיץ יש יותר הופעות. כרטיסים לאירועים גדולים כדאי לקנות מראש.</div></div>';
+  h+='<div class="foot">המידע כללי. תמיד אמתו תאריכים ומחירים באתר הרשמי לפני רכישה.</div>';
+  return h;
+}
 function viewInfo(){
   var h='<h2 class="first">מידע חיוני לתייר</h2>';
   h+=C.info.map(function(s){return '<details class="card"'+(s.open?' open':'')+'><summary>'+esc(s.t)+'</summary>'+ul(s.items)+'</details>';}).join('');
-  h+='<details class="card"><summary>שפה וביטויים</summary><div class="small">השפה הרשמית אזרית. רוסית נפוצה אצל מבוגרים ואנגלית בתיירות.</div><table class="facts">'+C.lang.map(function(l){return '<tr><td class="ltr">'+esc(l[0])+'</td><td>'+esc(l[1])+'</td></tr>';}).join('')+'</table></details>';
+  h+='<details class="card" open><summary>שפה וביטויים שימושיים</summary><div class="small">השפה הרשמית אזרית. רוסית נפוצה אצל מבוגרים ואנגלית בתיירות. לחצו 🔊 להשמעה (הגייה משוערת).</div>'+
+    '<table class="facts"><tr><th>עברית</th><th class="ltr">Azərbaycan</th><th class="ltr">הגייה</th><th></th></tr>'+
+    (C.langExt||C.lang).map(function(l){
+      var az=l[0], he=l[1], ph=l.length>=3?l[2]:'';
+      return '<tr><td>'+esc(he)+'</td><td class="ltr">'+esc(az)+'</td><td class="ltr mute">'+esc(ph||'—')+'</td><td><button class="btn sm sec" data-speak="'+esc(az)+'" type="button" aria-label="השמע">🔊</button></td></tr>';
+    }).join('')+'</table></details>';
   h+='<details class="card"><summary>רשימת הכנות לפני הנסיעה</summary><div class="mute small">הסימונים נשמרים בטלפון.</div>'+C.prep.map(function(t,i){return '<label class="chk"><input type="checkbox" data-chk="'+i+'"'+(state.chk.indexOf(i)>=0?' checked':'')+'><span>'+esc(t)+'</span></label>';}).join('')+'</details>';
   h+='<details class="card"><summary>מקורות</summary><ul class="tips small">'+C.sources.map(function(s){return '<li><a href="'+esc(s[1])+'" target="_blank" rel="noopener">'+esc(s[0])+'</a></li>';}).join('')+'</ul></details>';
   h+='<div class="foot">המידע נאסף עד '+esc(C.meta.updated)+' והוא כללי בלבד. לפני נסיעה בדקו באתרים הרשמיים.</div>';
@@ -214,7 +239,7 @@ function viewInfo(){
 }
 
 /* ====== מעטפת ====== */
-var VIEWS={home:viewHome,map:function(){return viewCityMap();},sights:viewSights,hotels:viewHotels,transport:viewTransport,restaurants:viewRest,food:viewFood,shop:viewShop,markets:viewMarkets,tips:viewTips,itin:function(){return viewItin();},info:viewInfo};
+var VIEWS={home:viewHome,map:function(){return viewCityMap();},sights:viewSights,hotels:viewHotels,transport:viewTransport,restaurants:viewRest,food:viewFood,shop:viewShop,markets:viewMarkets,tips:viewTips,itin:function(){return viewItin();},events:viewEvents,info:viewInfo};
 var NAV=[['home','🏠','בית'],['map','🗺️','מפה'],['sights','📸','אתרים'],['itin','🧭','מסלולים'],['menu','☰','תפריט']];
 function renderNav(){
   $('#nav').innerHTML=NAV.map(function(t){return '<button data-tab="'+t[0]+'" class="'+(state.tab===t[0]?'on':'')+'"><span class="ic">'+t[1]+'</span>'+t[2]+'</button>';}).join('');
@@ -275,8 +300,21 @@ function refreshAll(){
 
 /* ====== אירועים ====== */
 var DRAG={moved:false};
+function speakAz(txt){
+  if(!window.speechSynthesis){toast('השמעה לא נתמכת במכשיר זה');return;}
+  try{
+    window.speechSynthesis.cancel();
+    var u=new SpeechSynthesisUtterance(txt);
+    u.lang='az-AZ';
+    u.rate=0.9;
+    var voices=window.speechSynthesis.getVoices();
+    var az=voices.filter(function(v){return v.lang.indexOf('az')===0||v.lang.indexOf('tr')===0;})[0];
+    if(az)u.voice=az;
+    window.speechSynthesis.speak(u);
+  }catch(e){toast('לא הצלחתי להשמיע');}
+}
 document.addEventListener('click',function(ev){
-  var t=ev.target.closest('[data-tab],[data-go],[data-st],[data-f],[data-v],[data-ready],[data-from],[data-to],[data-sub],[data-sf],[data-hf],[data-sight],[data-fav],[data-onmap],[data-hmap],[data-refresh],[data-lay],[data-mz],[data-it],[data-itgen],[data-itcopy],[data-lyr],[data-locate],#swap,#closeSheet,#sheetBg,#closeDrawer,#drawerBg,#menuBtn');
+  var t=ev.target.closest('[data-tab],[data-go],[data-st],[data-f],[data-v],[data-ready],[data-from],[data-to],[data-sub],[data-sf],[data-hf],[data-sight],[data-fav],[data-onmap],[data-hmap],[data-refresh],[data-lay],[data-mz],[data-it],[data-itgen],[data-itcopy],[data-lyr],[data-locate],[data-speak],#swap,#closeSheet,#sheetBg,#closeDrawer,#drawerBg,#menuBtn');
   if(!t) return;
   if(DRAG.moved&&t.closest('#mapWrap')){DRAG.moved=false;return;}
   var d=t.dataset;
@@ -286,6 +324,7 @@ document.addEventListener('click',function(ev){
   if(t.id==='menuBtn'){openDrawer();return;}
   if(t.id==='swap'){var x=state.from;state.from=state.to;state.to=x;store.set('from',state.from);store.set('to',state.to);render();return;}
   if(d.refresh){closeDrawer();refreshAll();return;}
+  if(d.speak!==undefined){speakAz(d.speak);return;}
   if(d.fav){ev.stopPropagation();var i=state.sfav.indexOf(d.fav);if(i>=0)state.sfav.splice(i,1);else state.sfav.push(d.fav);store.set('sfav',state.sfav);
     if(t.id==='sfavBtn'){t.textContent=i>=0?'☆ שמירה':'★ שמור';}else{t.textContent=i>=0?'☆':'★';}return;}
   if(d.sight){openSight(d.sight);return;}
@@ -335,6 +374,10 @@ $('#installBtn').addEventListener('click',function(){if(!deferred)return;deferre
 window.addEventListener('appinstalled',function(){$('#installBtn').style.display='none';});
 if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
   window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
+}
+if(window.speechSynthesis){
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged=function(){window.speechSynthesis.getVoices();};
 }
 
 /* גרירה וצביטה במפת המטרו */

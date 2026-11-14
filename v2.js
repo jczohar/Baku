@@ -5,6 +5,25 @@ state.onlyK = {};
 state.myh = store.get('myh', null);
 state.cm = {q:'Baku, Azerbaijan', label:'באקו', mode:'g'};
 
+/* ביטויים עם הגייה (לטינית) */
+C.langExt = [
+  ['Salam','שלום','sa-LAM'],
+  ['Bəli / Xeyr','כן / לא','ba-LI / kheyr'],
+  ['Təşəkkür edirəm','תודה','ta-sha-KUR e-di-RAM'],
+  ['Bağışlayın','סליחה','ba-ghish-la-YIN'],
+  ['Neçəyədir?','כמה זה עולה?','ne-cha-ya-DIR'],
+  ['Haradadır …?','איפה נמצא …?','ha-ra-da-DIR'],
+  ['Su','מים','su'],
+  ['Hesab, zəhmət olmasa','חשבון בבקשה','he-SAB, zah-MAT ol-ma-SA'],
+  ['Zəhmət olmasa','בבקשה','zah-MAT ol-ma-SA'],
+  ['Məni bura aparın','קחו אותי לכאן','ma-NI bu-RA a-pa-RIN'],
+  ['Metro haradadır?','איפה המטרו?','met-RO ha-ra-da-DIR'],
+  ['Kömək edin','תעזרו לי','ko-MAK e-DIN'],
+  ['İngiliscə danışırsınız?','אתם מדברים אנגלית?','in-gi-lis-JA da-nish-ir-si-NIZ'],
+  ['Çox sağ olun','תודה רבה','chokh sa-GH o-LUN'],
+  ['Sağol','ביי / תודה','sa-GHOL']
+];
+
 /* ---- סימון מה מעניין ---- */
 function mkey(k,id){return k+':'+id;}
 function mval(k,id){return state.mine[mkey(k,id)]||0;}
@@ -71,17 +90,22 @@ function nextWk(){
 var WX={0:['☀️','בהיר'],1:['🌤️','בהיר ברובו'],2:['⛅','מעונן חלקית'],3:['☁️','מעונן'],45:['🌫️','ערפל'],48:['🌫️','ערפל'],51:['🌦️','טפטוף'],53:['🌦️','טפטוף'],55:['🌦️','טפטוף'],61:['🌧️','גשם'],63:['🌧️','גשם'],65:['🌧️','גשם חזק'],71:['❄️','שלג'],73:['❄️','שלג'],75:['❄️','שלג'],80:['🌦️','ממטרים'],81:['🌦️','ממטרים'],82:['⛈️','ממטרים חזקים'],95:['⛈️','סערה'],96:['⛈️','סערה'],99:['⛈️','סערה']};
 function wxGet(cb){
   var c=store.get('wx',null);
-  if(c&&Date.now()-c.t<3*3600*1000){cb(c.d,c.t,false);return;}
-  fetch('https://api.open-meteo.com/v1/forecast?latitude=40.37&longitude=49.85&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Asia%2FBaku&forecast_days=5').then(function(r){return r.json();}).then(function(j){
-    store.set('wx',{t:Date.now(),d:j.daily});cb(j.daily,Date.now(),false);
-  }).catch(function(){if(c)cb(c.d,c.t,true);else cb(null);});
+  if(c&&Date.now()-c.t<90*60*1000){cb(c.d,c.cur,c.t,false);return;}
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=40.37&longitude=49.85&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max&timezone=Asia%2FBaku&forecast_days=5').then(function(r){return r.json();}).then(function(j){
+    store.set('wx',{t:Date.now(),d:j.daily,cur:j.current});cb(j.daily,j.current,Date.now(),false);
+  }).catch(function(){if(c)cb(c.d,c.cur,c.t,true);else cb(null,null,null,true);});
 }
-function wxHtml(d,t,old){
+function wxHtml(d,cur,t,old){
   if(!d)return '<div class="mute small">אין חיבור כרגע ולא נשמרה תחזית. נסו שוב כשיש רשת.</div>';
-  var h='<div class="wxrow">';
+  var h='';
+  if(cur){
+    var cw=WX[cur.weather_code]||['🌡️',''];
+    h+='<div class="wxnow"><div class="wxi big">'+cw[0]+'</div><div><div class="small mute">עכשיו</div><b class="wxtemp">'+Math.round(cur.temperature_2m)+'°</b><div class="small">'+esc(cw[1])+(cur.wind_speed_10m?' · 💨 '+Math.round(cur.wind_speed_10m)+' קמ״ש':'')+(cur.relative_humidity_2m?' · 💧 '+cur.relative_humidity_2m+'%':'')+'</div></div></div>';
+  }
+  h+='<div class="wxrow">';
   d.time.forEach(function(day,i){
     var w=WX[d.weather_code[i]]||['🌡️',''],dt=new Date(day+'T12:00:00');
-    h+='<div class="wxd"><div class="small">'+(i===0?'היום':'יום '+DAYN[dt.getDay()])+'</div><div class="wxi">'+w[0]+'</div><b>'+Math.round(d.temperature_2m_max[i])+'°</b><div class="mute small">'+Math.round(d.temperature_2m_min[i])+'°</div><div class="small">'+esc(w[1])+'</div>'+(d.precipitation_sum[i]>=1?'<div class="small">☔ '+Math.round(d.precipitation_sum[i])+' מ״מ</div>':'')+'</div>';
+    h+='<div class="wxd"><div class="small">'+(i===0?'היום':'יום '+DAYN[dt.getDay()])+'</div><div class="wxi">'+w[0]+'</div><b>'+Math.round(d.temperature_2m_max[i])+'°</b><div class="mute small">'+Math.round(d.temperature_2m_min[i])+'°</div><div class="small">'+esc(w[1])+'</div>'+(d.precipitation_sum[i]>=1?'<div class="small">☔ '+Math.round(d.precipitation_sum[i])+' מ״מ</div>':'')+(d.precipitation_probability_max&&d.precipitation_probability_max[i]>=40?'<div class="small mute">סיכוי גשם '+d.precipitation_probability_max[i]+'%</div>':'')+'</div>';
   });
   h+='</div>';
   var mx=d.temperature_2m_max[0],tips=[];
@@ -91,7 +115,8 @@ function wxHtml(d,t,old){
   if(old)h+='<div class="mute small">התחזית נשמרה ב‑'+dmy(new Date(t))+', ואין חיבור לעדכון.</div>';
   return h;
 }
-function loadWeather(){var el=$('#wxbox');if(!el)return;wxGet(function(d,t,old){var e=$('#wxbox');if(e)e.innerHTML=wxHtml(d,t,old);});}
+window._lastWx={d:null,cur:null};
+function loadWeather(){var el=$('#wxbox');if(!el)return;wxGet(function(d,cur,t,old){window._lastWx={d:d,cur:cur};var e=$('#wxbox');if(e)e.innerHTML=wxHtml(d,cur,t,old);});}
 
 /* ---- המלון שלי, נהג, אני אבוד ---- */
 function myHotelName(){return state.myh&&state.myh.n;}
@@ -121,13 +146,47 @@ function openSOS(){
 }
 
 /* ---- בית ---- */
+function todayIdeas(){
+  var d=window._lastWx&&window._lastWx.d, cur=window._lastWx&&window._lastWx.cur;
+  var rain=d&&d.precipitation_sum&&d.precipitation_sum[0]>=1;
+  var cold=d&&d.temperature_2m_max&&d.temperature_2m_max[0]<12;
+  var hot=d&&d.temperature_2m_max&&d.temperature_2m_max[0]>=28;
+  var ideas=[];
+  if(rain){
+    ideas.push({e:'🏛️',t:'מרכז היידר אלייב',d:'מושלם ליום גשום – אדריכלות מרהיבה ומוזיאונים בפנים.',id:'hac'});
+    ideas.push({e:'🧶',t:'מוזיאון השטיחים',d:'מבנה ייחודי + אוסף שטיחים עולמי, הכל מקורה.',id:'carpet'});
+    ideas.push({e:'🛍️',t:'קניונים',d:'Park Bulvar, Port Baku או Deniz Mall – קניות וקפה בלי להירטב.',go:'shop'});
+  } else if(cold){
+    ideas.push({e:'🏰',t:'העיר העתיקה + תה חם',d:'סמטאות + בית תה מסורתי. הביאו מעיל.',id:'old'});
+    ideas.push({e:'🔥',t:'מגדלי הלהבה בשקיעה',d:'האור היפה ביותר בחורף הוא בשעות אחר הצהריים המאוחרות.',id:'flame'});
+  } else {
+    ideas.push({e:'🌊',t:'הטיילת + ונציה הקטנה',d:'טיול שטוח ונעים לאורך הים. מתאים לכל הגילאים.',id:'sea'});
+    ideas.push({e:'🏰',t:'העיר העתיקה + מגדל הבתולה',d:'הלב ההיסטורי. עדיף בבוקר לפני העומס.',id:'old'});
+    ideas.push({e:'🔥',t:'מגדלי הלהבה + פארק גבוה',d:'תצפית מדהימה, במיוחד לקראת שקיעה.',id:'flame'});
+  }
+  if(hot) ideas.unshift({e:'☕',t:'בתי קפה ומקומות מקורים',d:'חפשו צל ומזגן בצהריים. הטיילת נעימה יותר בערב.',go:'restaurants'});
+  var day=new Date().getDay();
+  if(day===0||day===6) ideas.push({e:'🧺',t:'שווקים',d:'סוף שבוע – שוק טאזה או השוק הירוק שווים ביקור בבוקר.',go:'markets'});
+  var mine=poolSights().filter(function(x){return mval('s',x.id)===1;}).slice(0,2);
+  mine.forEach(function(x){ideas.push({e:'⭐',t:x.he,d:'סימנתם כמעניין. היום זמן טוב לבקר.',id:x.id});});
+  return ideas.slice(0,5);
+}
+function openTodayIdeas(){
+  var ideas=todayIdeas();
+  var h='<h3>✨ מה עושים היום?</h3><div class="small mute">המלצות לפי מזג האוויר, היום בשבוע והמקומות שסימנתם ⭐. לחצו על הצעה לפרטים או לניווט.</div>';
+  ideas.forEach(function(it){
+    h+='<div class="card" style="cursor:pointer" '+(it.id?'data-sight="'+it.id+'"':it.go?'data-go="'+it.go+'"':'')+'><div class="row"><span style="font-size:28px">'+it.e+'</span><div class="grow"><b>'+esc(it.t)+'</b><div class="small">'+esc(it.d)+'</div></div></div></div>';
+  });
+  h+='<div class="row wrap" style="margin-top:8px"><button class="btn" data-go="itin">🧭 בנו מסלול מלא</button><button class="btn sec" id="closeSheet">סגירה</button></div>';
+  openSheet(h);
+}
 function viewHome2(){
-  var h='<div class="hero slim"><div class="herotxt"><div class="az ltr">Xoş gəlmisiniz</div><h1>ברוכים הבאים לבאקו</h1></div>'+skyline()+'</div>';
+  var h='<div class="hero slim"><div class="herotxt"><div class="az ltr">Xoş gəlmisiniz</div><h1>ברוכים הבאים לבאקו</h1><div class="sub">מדריך מלא למטייל · עובד גם בלי אינטרנט</div></div>'+skyline()+'</div>';
   h+='<div class="card"><div class="row"><b class="grow">☀️ מזג האוויר בבאקו</b><span class="mute small">'+dmy(new Date())+'</span></div><div id="wxbox"><div class="mute small">טוען תחזית…</div></div></div>';
+  h+='<button class="btn big" data-today="1" style="margin-bottom:10px">✨ מה עושים היום?</button>';
   h+='<div class="row2"><button class="bigb" data-myh="1"><span>🏨</span><b>'+(myHotelName()?esc(myHotelName()):'המלון שלי')+'</b><small>'+(myHotelName()?'שינוי':'בחרו כדי לנווט חזרה')+'</small></button><button class="bigb sos" data-sos="1"><span>🆘</span><b>אני אבוד</b><small>עזרה ומה קרוב אליי</small></button></div>';
   if(myHotelName())h+='<div class="row wrap" style="margin-bottom:10px"><a class="btn sm" target="_blank" rel="noopener" href="'+gDir(myHotelName()+' Baku','transit')+'">🧭 נווט חזרה למלון</a><button class="btn sm sec" data-drv="'+esc(myHotelName())+'">🚕 הראה לנהג</button></div>';
   h+='<div class="alert"><b>לפני שמזמינים:</b> יש הנחיות מסע של המל״ל לגבי אזרבייג׳ן. <a href="#" data-go="info">קראו ובדקו את הגרסה העדכנית</a>.</div>';
-  h+='<div class="card"><b>🎭 אירועים והופעות בקרוב</b><div class="small mute">איני מציג כאן רשימה כי אין לי מקור עדכני ומאומת. אלה האתרים שבהם מוכרים כרטיסים ומפרסמים לוח אירועים:</div><div class="row wrap" style="margin-top:8px"><a class="btn sm" target="_blank" rel="noopener" href="https://iticket.az/en/events">🎟️ iTicket: כל האירועים</a><a class="btn sm sec" target="_blank" rel="noopener" href="https://www.bandsintown.com/c/baku-azerbaijan">🎤 הופעות בבאקו</a></div></div>';
   h+='<div class="tilegrid">'+MENU.map(function(m,i){return '<button class="tile" data-go="'+m[0]+'" style="background:'+m[4]+'"><span class="n">'+(i+1)+'</span><span class="ic">'+m[1]+'</span><b>'+m[2]+'</b><span class="az ltr">'+m[3]+'</span></button>';}).join('')+'</div>';
   h+='<div class="card refresh"><div class="row"><div class="grow"><b>עדכון מידע והמלצות</b><div class="mute small">גרסת תוכן '+esc(C.meta.updated)+'</div></div><button class="btn" data-refresh="1">🔄 רענון</button></div></div>';
   return h;
@@ -208,12 +267,22 @@ function viewMarkets2(){
 
 /* ---- מפת העיר ---- */
 function viewCityMap2(){
-  var cm=state.cm,h='<div class="chips"><button class="chip'+(cm.mode==='g'?' on':'')+'" data-cmm="g">🗺️ גוגל מפות</button><button class="chip'+(cm.mode==='l'?' on':'')+'" data-cmm="l">📌 כל הסימונים</button></div>';
+  var cm=state.cm,h='<div class="chips"><button class="chip'+(cm.mode==='g'?' on':'')+'" data-cmm="g">🗺️ גוגל מפות</button><button class="chip'+(cm.mode==='l'?' on':'')+'" data-cmm="l">📌 כל הסימונים</button><button class="chip" data-fsmap="1">⛶ מסך מלא</button></div>';
+  h+='<div class="card" style="margin-bottom:8px"><b>📍 בחר מקום במפה</b><div class="small mute">בחרו קטגוריה ואז מקום – המפה תתמקד בו. אפשר גם לבנות מסלול.</div>';
+  h+='<div class="chips wrapchips" style="margin-top:6px">'+
+    '<button class="chip" data-cmq="Baku, Azerbaijan|באקו">עיר</button>'+
+    (myHotelName()?'<button class="chip" data-cmq="'+esc(myHotelName()+' Baku')+'|'+esc(myHotelName())+'">🏨 המלון שלי</button>':'')+
+    '<button class="chip" data-cmq="İçərişəhər Baku|העיר העתיקה">🏰 עיר עתיקה</button>'+
+    '<button class="chip" data-cmq="Baku Boulevard|הטיילת">🌊 טיילת</button>'+
+    '<button class="chip" data-cmq="Heydar Aliyev Center Baku|מרכז היידר אלייב">🏛️ היידר אלייב</button>'+
+    '<button class="chip" data-cmq="Flame Towers Baku|מגדלי הלהבה">🔥 להבות</button>'+
+    '<button class="chip" data-cmq="Fountain Square Baku|כיכר המזרקות">⛲ מזרקות</button>'+
+    '</div></div>';
   if(cm.mode==='l')return h+viewCityMapOld();
   h+='<div class="cmap"><iframe title="מפה" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen src="https://maps.google.com/maps?q='+encodeURIComponent(cm.q)+'&z=14&output=embed"></iframe></div>';
   h+='<div class="row wrap" style="margin:8px 0"><b class="grow">📍 '+esc(cm.label)+'</b>'+navBtns(cm.q,cm.label)+'</div>';
   var mine=C.sights.filter(function(x){return mval('s',x.id)===1;}),pool=mine.length?mine:C.sights.filter(function(x){return vis('s',x.id);});
-  h+='<div class="mute small">'+(mine.length?'המקומות שסימנתם ⭐':'לחצו על מקום כדי לראות אותו במפה (סמנו ⭐ באתרים כדי לראות כאן רק את שלכם)')+'</div><div class="chips wrapchips">'+(myHotelName()?'<button class="chip" data-cmq="'+esc(myHotelName()+' Baku')+'|'+esc(myHotelName())+'">🏨 '+esc(myHotelName())+'</button>':'')+pool.map(function(x){return '<button class="chip" data-cmq="'+esc(gq(x))+'|'+esc(x.he)+'">'+esc(x.he)+'</button>';}).join('')+'</div>';
+  h+='<div class="mute small">'+(mine.length?'המקומות שסימנתם ⭐':'לחצו על מקום כדי לראות אותו במפה (סמנו ⭐ באתרים כדי לראות כאן רק את שלכם)')+'</div><div class="chips wrapchips">'+pool.map(function(x){return '<button class="chip" data-cmq="'+esc(gq(x))+'|'+esc(x.he)+'">'+esc(x.he)+'</button>';}).join('')+'</div>';
   h+='<div class="mute small">המפה דורשת אינטרנט. המפה של המטרו נמצאת ב”תחבורה ומחירים“ ועובדת גם בלי חיבור.</div>';
   return h;
 }
@@ -224,7 +293,7 @@ VIEWS.home=viewHome2;VIEWS.sights=viewSights2;VIEWS.hotels=viewHotels2;VIEWS.res
 (function(){var r0=render;render=function(){r0();if(state.tab==='home')loadWeather();hydrate();};})();
 (function(){var r1=renderNav;})();
 document.addEventListener('click',function(ev){
-  var t=ev.target.closest('[data-mark],[data-only],[data-drv],[data-sos],[data-myh],[data-myhsave],[data-setmyh],[data-cmm],[data-cmq]');
+  var t=ev.target.closest('[data-mark],[data-only],[data-drv],[data-sos],[data-myh],[data-myhsave],[data-setmyh],[data-cmm],[data-cmq],[data-today],[data-fsmap]');
   if(!t)return;var d=t.dataset;
   if(d.mark){var p=d.mark.split('|');setMine(p[0],p[1],+p[2]);var open=document.getElementById('sheet').style.display==='block';
     if(open&&p[0]==='s'){openSight2(p[1]);}else rerender();return;}
@@ -232,12 +301,14 @@ document.addEventListener('click',function(ev){
   if(d.drv!==undefined){showDriver(d.drv);return;}
   if(d.sos!==undefined){openSOS();return;}
   if(d.myh!==undefined){openMyHotel();return;}
+  if(d.today!==undefined){openTodayIdeas();return;}
   if(d.setmyh){var h=HOTELS.filter(function(x){return x.id===d.setmyh;})[0];state.myh={id:h.id,n:h.n};store.set('myh',state.myh);toast('נשמר כמלון שלכם: '+h.n);return;}
   if(d.myhsave!==undefined){var s=$('#myhSel').value,tx=$('#myhTxt').value.trim(),hh=HOTELS.filter(function(x){return x.id===s;})[0];
     if(hh)state.myh={id:hh.id,n:hh.n};else if(tx)state.myh={n:tx};else{toast('בחרו מלון או הקלידו שם.');return;}
     store.set('myh',state.myh);closeSheet();render();toast('המלון נשמר.');return;}
   if(d.cmm){state.cm.mode=d.cmm;rerender();return;}
   if(d.cmq){var z=d.cmq.split('|');state.cm.q=z[0];state.cm.label=z[1];rerender();return;}
+  if(d.fsmap!==undefined){var cm=$('.cmap');if(cm){cm.classList.toggle('fs');t.textContent=cm.classList.contains('fs')?'✕ יציאה ממסך מלא':'⛶ מסך מלא';}}
 });
 document.getElementById('header-sos')&&0;
 render();

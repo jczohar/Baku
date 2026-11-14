@@ -1,7 +1,7 @@
 window.BAKU_CONTENT={
  "meta": {
-  "version": "2026-11-08.3",
-  "updated": "08/11/2026",
+  "version": "2026-11-14.1",
+  "updated": "14/11/2026",
   "rate": 1.7
  },
  "sights": [

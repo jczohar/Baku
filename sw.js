@@ -1,4 +1,4 @@
-const CACHE = 'baku-guide-v2';
+const CACHE = 'baku-guide-v3';
 const FILES = ['./','./index.html','./style.css','./content.js','./art.js','./metro.js','./metrodata.js','./app.js','./map.js','./itin.js','./v2.js','./manifest.webmanifest',
   './vendor/leaflet/leaflet.js','./vendor/leaflet/leaflet.css','./icons/icon-192.png','./icons/icon-512.png','./icons/icon-maskable-512.png','./icons/apple-touch-icon.png'];
 self.addEventListener('install', (e) => {

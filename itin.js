@@ -38,7 +38,7 @@ function viewItin(){
   var hotelOpts=[['area:old','עדיין לא בחרתי: העיר העתיקה'],['area:sea','עדיין לא בחרתי: הטיילת והים'],['area:center','עדיין לא בחרתי: מרכז העיר'],['area:hill','עדיין לא בחרתי: הגבעה (נוף)']].concat(HOTELS.map(function(x){return [x.id,x.n+' ('+x.stars+'★)'];}));
   var h='<h2 class="first">מסלולים מומלצים</h2><div class="mute small">ענו על כמה שאלות והמסלול יותאם לכם: מי מטייל, איפה המלון, כמה ללכת ומה מעניין אתכם.</div>';
   h+='<div class="card wiz">'+
-   '<div class="grid2"><div><label>כמה ימים</label>'+sel('days',[1,2,3,4,5,6,7].map(function(n){return [n,n+(n===1?' יום':' ימים')];}),s.days)+'</div><div><label>תאריך הגעה</label><input type="date" data-itf="start" value="'+esc(s.start)+'"></div></div>'+
+   '<div class="grid2"><div><label>כמה ימים</label>'+sel('days',[1,2,3,4,5,6,7,8,9,10].map(function(n){return [n,n+(n===1?' יום':' ימים')];}),s.days)+'</div><div><label>תאריך הגעה</label><input type="date" data-itf="start" value="'+esc(s.start)+'"></div></div>'+
    '<div class="grid3"><div><label>מבוגרים</label>'+num('adults',1,10)+'</div><div><label>ילדים</label>'+num('kids',0,8)+'</div><div><label>מבוגרים 65+</label>'+num('seniors',0,10)+'</div></div>'+
    (s.kids>0?'<label>גיל הילדים</label>'+sel('kidAge',[['u6','עד גיל 6 (גם עגלה)'],['6_12','6 עד 12'],['teen','נוער']],s.kidAge):'')+
    '<label>המלון או אזור הלינה</label>'+sel('hotel',hotelOpts,s.hotel)+
@@ -101,6 +101,7 @@ function pickRest(areaKey,day){
   return c[day%c.length];
 }
 function itGenerate(){
+  if(typeof loadWeather==='function'&&!(window._lastWx&&window._lastWx.d))try{loadWeather();}catch(e){}
   var s=state.it,n=s.days,startD=pd(s.start);
   var young=s.kids>0&&s.kidAge==='u6';
   var cands=(window.poolSights?poolSights():C.sights).map(function(x){return {x:x,sc:scoreSight(x),cl:clusterOf(x)};}).filter(function(c){return c.sc>1.5;});
@@ -176,7 +177,20 @@ function renderItin(o){
   notes.push('שעות הפתיחה והמחירים משוערים. מוזיאונים וחלק מהאתרים סגורים בימי שני.');
   h+='<div class="card tipbox">'+ul(notes)+'</div>';
   o.days.forEach(function(d){
-    h+='<div class="card dayc"><div class="dayh"><span class="dn">יום '+(d.i+1)+'</span><span>יום '+DAYN[d.date.getDay()]+', '+dmy(d.date)+'</span></div>';
+    var wxLine='';
+    try{
+      var wx=window._lastWx&&window._lastWx.d;
+      if(wx&&wx.time){
+        var iso=d.date.getFullYear()+'-'+('0'+(d.date.getMonth()+1)).slice(-2)+'-'+('0'+d.date.getDate()).slice(-2);
+        var wi=wx.time.indexOf(iso);
+        if(wi>=0){
+          var WXmap=window.WX||{0:['☀️','בהיר'],1:['🌤️','בהיר ברובו'],2:['⛅','מעונן חלקית'],3:['☁️','מעונן'],61:['🌧️','גשם'],63:['🌧️','גשם'],80:['🌦️','ממטרים'],95:['⛈️','סערה']};
+          var w=WXmap[wx.weather_code[wi]]||['🌡️',''];
+          wxLine='<div class="small" style="margin:4px 0 8px">'+w[0]+' '+esc(w[1])+' · מקס '+Math.round(wx.temperature_2m_max[wi])+'° / מינ '+Math.round(wx.temperature_2m_min[wi])+'°'+(wx.precipitation_sum[wi]>=1?' · ☔ '+Math.round(wx.precipitation_sum[wi])+' מ״מ':'')+'</div>';
+        }
+      }
+    }catch(e){}
+    h+='<div class="card dayc"><div class="dayh"><span class="dn">יום '+(d.i+1)+'</span><span>יום '+DAYN[d.date.getDay()]+', '+dmy(d.date)+'</span></div>'+wxLine;
     if(d.note)h+='<div class="small mute">'+esc(d.note)+'</div>';
     if(!d.timeline.length&&!d.note)h+='<div class="small mute">יום חופשי: מנוחה, קניות או בית קפה. אפשר להחליט במקום.</div>';
     var firstLeg=d.timeline.filter(function(z){return z.x;})[0];
