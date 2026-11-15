@@ -39,6 +39,7 @@ function initCityMap(){
   items.filter(function(it){return !it.ll;}).forEach(function(it){GEOQ.push({it:it,add:add,map:CM});});
   runGeo();
   if(state.focus){var f=state.focus;var it=items.filter(function(x){return x.k===f.k&&x.id===f.id;})[0];if(it&&!it.ll)toast('מחפש את המיקום…');}
+  if(state.itRoute&&typeof itDrawRouteOnMap==='function')setTimeout(function(){itDrawRouteOnMap();},350);
 }
 function runGeo(){
   if(GEOBUSY||!GEOQ.length||navigator.onLine===false)return;

@@ -314,7 +314,7 @@ function speakAz(txt){
   }catch(e){toast('לא הצלחתי להשמיע');}
 }
 document.addEventListener('click',function(ev){
-  var t=ev.target.closest('[data-tab],[data-go],[data-st],[data-f],[data-v],[data-ready],[data-from],[data-to],[data-sub],[data-sf],[data-hf],[data-sight],[data-fav],[data-onmap],[data-hmap],[data-refresh],[data-lay],[data-mz],[data-it],[data-itgen],[data-itcopy],[data-itsave],[data-itload],[data-itdel],[data-itrm],[data-lyr],[data-locate],[data-speak],#swap,#closeSheet,#sheetBg,#closeDrawer,#drawerBg,#menuBtn');
+  var t=ev.target.closest('[data-tab],[data-go],[data-st],[data-f],[data-v],[data-ready],[data-from],[data-to],[data-sub],[data-sf],[data-hf],[data-sight],[data-fav],[data-onmap],[data-hmap],[data-refresh],[data-lay],[data-mz],[data-it],[data-itgen],[data-itcopy],[data-itsave],[data-itload],[data-itdel],[data-itrm],[data-itlinkadd],[data-itlinkdel],[data-itmap],[data-itprint],[data-itfile],[data-itshare],[data-lyr],[data-locate],[data-speak],#swap,#closeSheet,#sheetBg,#closeDrawer,#drawerBg,#menuBtn');
   if(!t) return;
   if(DRAG.moved&&t.closest('#mapWrap')){DRAG.moved=false;return;}
   var d=t.dataset;
@@ -355,9 +355,16 @@ document.addEventListener('click',function(ev){
   if(d.itload!==undefined){itLoadSaved(+d.itload);return;}
   if(d.itdel!==undefined){itDeleteSaved(+d.itdel);return;}
   if(d.itrm!==undefined){var p=d.itrm.split(':');itRemoveItem(+p[0],+p[1]);return;}
+  if(d.itlinkadd!==undefined){itAddLink();return;}
+  if(d.itlinkdel!==undefined){itDelLink(+d.itlinkdel);return;}
+  if(d.itmap!==undefined){itShowMap(+d.itmap);return;}
+  if(d.itprint!==undefined){itPrint();return;}
+  if(d.itfile!==undefined){itSaveFile();return;}
+  if(d.itshare!==undefined){itShare();return;}
 });
 document.addEventListener('change',function(ev){
   var el=ev.target;
+  if(el.dataset&&el.dataset.itmode){var p=el.dataset.itmode.split(':');itSetMode(+p[0],+p[1],el.value);return;}
   if(el.id==='from'){state.from=el.value;store.set('from',el.value);renderPlan();}
   else if(el.id==='to'){state.to=el.value;store.set('to',el.value);renderPlan();}
   else if(el.id==='done'){state.done=el.checked;store.set('done',el.checked);renderPlan();}
