@@ -927,6 +927,16 @@ details.more{margin:8px 0}details.more summary{font-weight:700;cursor:pointer;co
 .datepick .dateico{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;pointer-events:none;z-index:1}
 .datepick input[type=date]{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;font-size:16px;z-index:2}
 .modesel{font-size:13px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-family:inherit;max-width:100%}
+/* התאמה אישית */
+.ratebox{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:8px 0}
+.starBtn{border:0;background:transparent;font-size:22px;cursor:pointer;line-height:1;padding:2px 4px;color:#ccc}
+.starBtn.on{color:#FFB300}
+.notebox{margin:8px 0}
+.notebox textarea,.pers textarea,#edNote{width:100%;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-family:inherit;font-size:15px;resize:vertical}
+.pers input,#edTel,#edWeb,#edPrice{width:100%;padding:10px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-family:inherit;font-size:15px;margin:4px 0 8px}
+.editbadge{background:linear-gradient(135deg,rgba(255,179,0,.15),rgba(123,47,247,.1));border:1px dashed var(--brand2)}
+.fxb{background:linear-gradient(135deg,rgba(0,168,232,.1),rgba(67,206,162,.1))}
+.pers{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 
 </style>
 </head>
@@ -4471,6 +4481,230 @@ document.addEventListener('click',function(ev){
   }
 });
 document.getElementById('header-sos')&&0;
+
+/* ===== התאמה אישית: דירוגים, הערות, עריכה, שיתוף, מטבע ===== */
+state.notes = store.get('notes', {});   /* key -> text */
+state.rates = store.get('rates', {});   /* key -> 1..5 */
+state.userItems = store.get('userItems', {sights:[], hotels:[], restaurants:[]});
+state.fx = store.get('fx', null); /* {aznIls, usdIls, t} */
+
+function nkey(k,id){return k+':'+id;}
+function getNote(k,id){return state.notes[nkey(k,id)]||'';}
+function setNote(k,id,txt){var key=nkey(k,id);if(txt)state.notes[key]=txt;else delete state.notes[key];store.set('notes',state.notes);}
+function getRate(k,id){return state.rates[nkey(k,id)]||0;}
+function setRate(k,id,v){var key=nkey(k,id);if(v)state.rates[key]=v;else delete state.rates[key];store.set('rates',state.rates);}
+
+function rateStarsHtml(k,id){
+  var r=getRate(k,id),h='<div class="ratebox" data-rk="'+k+'" data-rid="'+id+'"><span class="mute small">הדירוג שלי:</span> ';
+  for(var i=1;i<=5;i++)h+='<button type="button" class="starBtn'+(i<=r?' on':'')+'" data-setrate="'+k+'|'+id+'|'+i+'" aria-label="'+i+' כוכבים">'+(i<=r?'★':'☆')+'</button>';
+  if(r)h+='<button type="button" class="starBtn" data-setrate="'+k+'|'+id+'|0" title="נקה">✕</button>';
+  return h+'</div>';
+}
+function noteBoxHtml(k,id){
+  var n=getNote(k,id);
+  return '<div class="notebox"><label class="small">ההערה שלי</label><textarea data-note="'+k+'|'+id+'" rows="2" placeholder="רשמו טיפ אישי, שעות שראיתם, וכו׳…">'+esc(n)+'</textarea><button class="btn sm sec" data-savenote="'+k+'|'+id+'" type="button">💾 שמור הערה</button></div>';
+}
+
+function personalBar(k,id){
+  return '<div class="pers">' + rateStarsHtml(k,id) + noteBoxHtml(k,id) +
+    '<div class="row wrap"><button class="btn sm sec" data-edititem="'+k+'|'+id+'" type="button">✏️ עדכון פרטים</button></div></div>';
+}
+
+function openEditItem(k,id){
+  var item=null, title='';
+  if(k==='s'){item=sightById(id);title=item?item.he:id;}
+  else if(k==='h'){item=HOTELS.filter(function(x){return x.id===id;})[0];title=item?item.n:id;}
+  else if(k==='r'){var list=(C.restaurants||[]);item=list.filter(function(x){return x.id===id;})[0];title=item?(item.n||item.he):id;}
+  var edits=store.get('edits',{});
+  var e=edits[nkey(k,id)]||{};
+  var h='<h3>✏️ עדכון: '+esc(title)+'</h3><div class="small mute">השינויים נשמרים במכשיר שלכם ומתווספים מעל המידע המקורי.</div>';
+  h+='<label>הערה / עדכון חופשי</label><textarea id="edNote" rows="4" placeholder="למשל: סגור לשיפוצים, מחיר חדש, טיפ…">'+esc(e.note||getNote(k,id)||'')+'</textarea>';
+  h+='<label>טלפון (אם השתנה)</label><input id="edTel" value="'+esc(e.tel||'')+'" dir="ltr">';
+  h+='<label>אתר / קישור</label><input id="edWeb" value="'+esc(e.web||'')+'" dir="ltr" placeholder="https://">';
+  h+='<label>מחיר / מידע נוסף</label><input id="edPrice" value="'+esc(e.price||'')+'">';
+  h+='<div class="row wrap" style="margin-top:10px"><button class="btn" data-saveedit="'+k+'|'+id+'">💾 שמירה</button><button class="btn sec" id="closeSheet">ביטול</button></div>';
+  openSheet(h);
+}
+function saveEditItem(k,id){
+  var edits=store.get('edits',{});
+  var key=nkey(k,id);
+  edits[key]={
+    note:(($('#edNote')||{}).value||'').trim(),
+    tel:(($('#edTel')||{}).value||'').trim(),
+    web:(($('#edWeb')||{}).value||'').trim(),
+    price:(($('#edPrice')||{}).value||'').trim(),
+    t:Date.now()
+  };
+  if(!edits[key].note&&!edits[key].tel&&!edits[key].web&&!edits[key].price)delete edits[key];
+  store.set('edits',edits);
+  if(edits[key]&&edits[key].note)setNote(k,id,edits[key].note);
+  closeSheet();toast('העדכון נשמר במכשיר');
+  render();
+}
+function editsHtml(k,id){
+  var e=(store.get('edits',{})[nkey(k,id)])||null;
+  if(!e)return '';
+  var h='<div class="card editbadge"><b>✏️ העדכון שלכם</b>';
+  if(e.note)h+='<div class="small">'+esc(e.note)+'</div>';
+  if(e.tel)h+='<div class="small">טלפון: <span class="ltr">'+esc(e.tel)+'</span></div>';
+  if(e.web)h+='<div class="small"><a href="'+esc(e.web)+'" target="_blank" rel="noopener">'+esc(e.web)+'</a></div>';
+  if(e.price)h+='<div class="small">'+esc(e.price)+'</div>';
+  return h+'</div>';
+}
+
+function fetchFx(){
+  /* שער משוער AZN→ILS דרך דולר; נשמר ל‑6 שעות */
+  var c=state.fx;
+  if(c&&Date.now()-c.t<6*3600*1000)return Promise.resolve(c);
+  return fetch('https://api.exchangerate-api.com/v4/latest/AZN').then(function(r){return r.json();}).then(function(j){
+    var ils=j&&j.rates&&j.rates.ILS;
+    var usd=j&&j.rates&&j.rates.USD;
+    if(ils){
+      state.fx={aznIls:+ils, usdIls: usd? +(ils/usd).toFixed(3) : null, t:Date.now()};
+      store.set('fx',state.fx);
+      if(state.fx.usdIls){state.usdIls=String(state.fx.usdIls);store.set('usdIls',state.usdIls);}
+      return state.fx;
+    }
+    return c;
+  }).catch(function(){return c;});
+}
+function fxBannerHtml(){
+  var fx=state.fx;
+  if(!fx||!fx.aznIls)return '<div class="card fxb"><b>💱 מטבע</b><div class="small mute">טוען שער מנאט (AZN)…</div><button class="btn sm" data-fx="1" type="button">רענון שער</button></div>';
+  var when=new Date(fx.t);
+  return '<div class="card fxb"><b>💱 שער משוער</b><div class="small">1 מנאט (AZN) ≈ <b>'+fx.aznIls.toFixed(2)+' ₪</b>'+(fx.usdIls?' · 1$ ≈ '+fx.usdIls+' ₪':'')+'</div><div class="mute small">עודכן: '+dmy(when)+' '+('0'+when.getHours()).slice(-2)+':'+('0'+when.getMinutes()).slice(-2)+' · שערי בנקים משתנים</div><button class="btn sm sec" data-fx="1" type="button">🔄 עדכון שער</button></div>';
+}
+function loadFx(){
+  fetchFx().then(function(){
+    var el=document.querySelector('.fxb');
+    if(el){var tmp=document.createElement('div');tmp.innerHTML=fxBannerHtml();el.replaceWith(tmp.firstChild);}
+  });
+}
+
+function buildSharePack(){
+  return {
+    v:1,
+    name:'באקו מותאם אישית',
+    t:Date.now(),
+    tab:state.tab,
+    mine:state.mine,
+    notes:state.notes,
+    rates:state.rates,
+    edits:store.get('edits',{}),
+    itSaved:state.itSaved,
+    itOut:state.itOut,
+    myh:state.myh,
+    sfav:state.sfav,
+    links: (state.itOut&&state.itOut.links)||[]
+  };
+}
+function applySharePack(p){
+  if(!p||!p.v){toast('חבילה לא תקינה');return;}
+  if(p.mine){state.mine=p.mine;store.set('mine',state.mine);}
+  if(p.notes){state.notes=p.notes;store.set('notes',state.notes);}
+  if(p.rates){state.rates=p.rates;store.set('rates',state.rates);}
+  if(p.edits)store.set('edits',p.edits);
+  if(p.itSaved){state.itSaved=p.itSaved;store.set('itSaved',state.itSaved);}
+  if(p.itOut){state.itOut=p.itOut;if(state.itOut.days)state.itOut.days.forEach(function(d){if(typeof d.date==='string')d.date=new Date(d.date);});store.set('itOut',state.itOut);}
+  if(p.myh){state.myh=p.myh;store.set('myh',state.myh);}
+  if(p.sfav){state.sfav=p.sfav;store.set('sfav',state.sfav);}
+  toast('הייבוא הוחל · באקו מותאם אישית');
+  render();
+}
+function sharePersonalized(){
+  var pack=buildSharePack();
+  var json=JSON.stringify(pack);
+  var b64=btoa(unescape(encodeURIComponent(json)));
+  var url=location.href.split('#')[0].split('?')[0]+'#pack='+encodeURIComponent(b64);
+  if(navigator.share){
+    navigator.share({title:'באקו מותאם אישית',text:'המדריך שלי לבאקו עם סימונים, הערות ומסלולים',url:url}).catch(function(){});
+    return;
+  }
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(function(){toast('קישור מותאם הועתק – שלחו לחבר');});
+    return;
+  }
+  prompt('העתיקו את הקישור:', url);
+}
+function importPackFromHash(){
+  try{
+    var h=location.hash||'';
+    var m=h.match(/pack=([^&]+)/);
+    if(!m)return;
+    var json=decodeURIComponent(escape(atob(decodeURIComponent(m[1]))));
+    var pack=JSON.parse(json);
+    if(confirm('לייבא התאמה אישית (סימונים, הערות, מסלולים)?'))applySharePack(pack);
+    history.replaceState(null,'',location.pathname+location.search);
+  }catch(e){}
+}
+function shareMyLocation(){
+  if(!navigator.geolocation){toast('אין GPS במכשיר');return;}
+  toast('מאתר…');
+  navigator.geolocation.getCurrentPosition(function(p){
+    var lat=p.coords.latitude.toFixed(6), lon=p.coords.longitude.toFixed(6);
+    var url='https://www.google.com/maps?q='+lat+','+lon;
+    var text='המיקום שלי בבאקו: '+url;
+    if(navigator.share)navigator.share({title:'המיקום שלי',text:text,url:url}).catch(function(){});
+    else if(navigator.clipboard)navigator.clipboard.writeText(text).then(function(){toast('מיקום הועתק');});
+    else window.open(url,'_blank');
+  },function(){toast('לא התקבל אישור למיקום');},{enableHighAccuracy:true,timeout:10000});
+}
+
+/* הרחבת כרטיס אתר */
+var _openSight2 = openSight2;
+openSight2 = function(id){
+  _openSight2(id);
+  setTimeout(function(){
+    var sh=$('#sheet');if(!sh)return;
+    var extra=editsHtml('s',id)+personalBar('s',id);
+    var box=document.createElement('div');box.innerHTML=extra;
+    sh.appendChild(box);
+  },30);
+};
+openSight=openSight2;
+
+/* בית: מטבע + שיתוף */
+var _viewHome2 = viewHome2;
+viewHome2 = function(){
+  var h=_viewHome2();
+  h=h.replace('</div><button class="btn big"','</div>'+fxBannerHtml()+'<button class="btn big"');
+  h+='<div class="card"><b>🤝 שיתוף</b><div class="row wrap" style="margin-top:8px">'+
+    '<button class="btn sm" data-sharepack="1" type="button">📤 באקו מותאם אישית</button>'+
+    '<button class="btn sm sec" data-shareloc="1" type="button">📍 שלח את המיקום שלי</button>'+
+    '</div><div class="small mute">«מותאם אישית» שולח קישור עם הסימונים, ההערות והמסלולים שלכם.</div></div>';
+  return h;
+};
+VIEWS.home=viewHome2;viewHome=viewHome2;
+
+/* האזנה לאירועי התאמה אישית */
+document.addEventListener('click',function(ev){
+  var t=ev.target.closest('[data-setrate],[data-savenote],[data-edititem],[data-saveedit],[data-sharepack],[data-shareloc],[data-fx]');
+  if(!t)return;
+  var d=t.dataset;
+  if(d.setrate){var p=d.setrate.split('|');setRate(p[0],p[1],+p[2]);toast(+p[2]?('דורג '+p[2]+'★'):'הדירוג הוסר');
+    var box=t.closest('.ratebox');if(box)box.outerHTML=rateStarsHtml(p[0],p[1]);return;}
+  if(d.savenote){var p2=d.savenote.split('|');var ta=document.querySelector('textarea[data-note="'+d.savenote+'"]');setNote(p2[0],p2[1],ta?ta.value.trim():'');toast('ההערה נשמרה');return;}
+  if(d.edititem){var p3=d.edititem.split('|');openEditItem(p3[0],p3[1]);return;}
+  if(d.saveedit){var p4=d.saveedit.split('|');saveEditItem(p4[0],p4[1]);return;}
+  if(d.sharepack!==undefined){sharePersonalized();return;}
+  if(d.shareloc!==undefined){shareMyLocation();return;}
+  if(d.fx!==undefined){state.fx=null;store.set('fx',null);loadFx();toast('מעדכן שער…');return;}
+});
+
+/* רענון מורחב */
+var _refreshAll = typeof refreshAll==='function'?refreshAll:null;
+if(_refreshAll){
+  refreshAll=function(){
+    state.fx=null;store.set('fx',null);
+    loadFx();
+    if(typeof loadWeather==='function')loadWeather();
+    _refreshAll();
+  };
+}
+
+importPackFromHash();
+loadFx();
+
 render();
 
 </script>
