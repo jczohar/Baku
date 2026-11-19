@@ -938,29 +938,14 @@ details.more{margin:8px 0}details.more summary{font-weight:700;cursor:pointer;co
 .fxb{background:linear-gradient(135deg,rgba(0,168,232,.1),rgba(67,206,162,.1))}
 .pers{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 
-
-/* ===== Dark mode (synced) ===== */
-body.dark{
-  --bg:#12141c; --card:#1c2230; --ink:#eef1f8; --line:#2e3648; --muted:#9aa3b8;
-  --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --info:#60a5fa;
-  --shadow:0 4px 18px rgba(0,0,0,.5);
-  background:var(--bg); color:var(--ink);
-}
-body.dark input, body.dark select, body.dark textarea,
-body.dark .fld, body.dark .in{background:#1c2230; border-color:var(--line); color:var(--ink)}
-body.dark .card, body.dark .day, body.dark .box, body.dark .stop,
-body.dark .modal>div, body.dark .sheet{background:var(--card)!important; color:var(--ink)}
-body.dark header, body.dark #top, body.dark #hdr{filter:brightness(.95)}
-body.dark .btn.l, body.dark .btn.alt, body.dark .btn.ghost{background:#2a3144; color:var(--ink)}
-body.dark .note, body.dark .meta, body.dark .muted, body.dark .cnt{color:var(--muted)}
-body.dark .chip{background:#2a3144; border-color:#3a4560}
-body.dark .chip.on{background:var(--navy,#3b82f6); color:#fff}
-
-.dark-fab{position:fixed;bottom:18px;left:18px;z-index:950;width:44px;height:44px;border-radius:50%;
-background:linear-gradient(135deg,#1e293b,#0f172a);color:#fbbf24;font-size:20px;border:2px solid #fbbf24;
-box-shadow:0 4px 14px rgba(0,0,0,.35);cursor:pointer;display:flex;align-items:center;justify-content:center}
-body.dark .dark-fab{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1e293b;border-color:#1e293b}
 </style>
+<style id="guide-dark-css">
+html.dark,body.dark{--bg:#12141c;--card:#1c2230;--ink:#eef1f8;--line:#2e3648;--muted:#9aa3b8}
+html.dark body,body.dark{background:#12141c!important;color:#eef1f8}
+body.dark input,body.dark select,body.dark textarea{background:#1c2230;color:#eef1f8;border-color:#2e3648}
+body.dark .card,body.dark .day,body.dark .box,body.dark .modal,body.dark .sheet,body.dark .panel{background:#1c2230!important;color:#eef1f8}
+</style>
+
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0f766e">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -984,8 +969,6 @@ body.dark .dark-fab{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1e
 <div id="toast" role="status"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-
-/* SYNCED_MAX 2026-11-19 – dark|today|routeWx|daytrip|backup|AREAS */
 /* ===== content.js ===== */
 window.BAKU_CONTENT={
  "meta": {
@@ -2594,17 +2577,6 @@ var ART = (function(){
 
 /* ===== metro.js ===== */
 'use strict';
-
-const AREAS = {
-  "Old City": "העיר העתיקה (איצ'רי שחר)", "Boulevard": "הבולווארד",
-  "Fountain Square": "כיכר המזרקות", "daytrip": "🚆 טיולי יום / מחוץ לעיר"
-};
-
-/* weather advice helpers (synced) */
-function isRainyCode(c){ return (c>=51&&c<=67)||(c>=80&&c<=99); }
-function isHotDay(w, temp){ return (w && w.max>=31) || (temp!=null && temp>=33); }
-function isColdDay(w){ return w && w.max<=10; }
-function todayISO(){ try{const d=new Date();return d.toISOString().slice(0,10);}catch(e){return '';} }
 
 /* ---------- נתונים ---------- */
 var LINES = {
@@ -4745,237 +4717,72 @@ loadFx();
 
 render();
 
-
-/* dark mode toggle synced */
-(function(){
-  try{
-    const key = 'guide_dark_' + (location.pathname||'app');
-    if(localStorage.getItem(key)==='1') document.body.classList.add('dark');
-    document.addEventListener('click', function(e){
-      const t = e.target.closest('[data-act="dark"],[data-m="theme"],#btnTheme,.dark-toggle');
-      if(!t) return;
-      const on = document.body.classList.toggle('dark');
-      localStorage.setItem(key, on ? '1' : '0');
-      if(typeof toast==='function') toast(on ? 'מצב לילה' : 'מצב יום');
-    });
-  }catch(e){}
-})();
-
-(function(){
-  if(document.querySelector('.dark-fab')) return;
-  const b=document.createElement('button');
-  b.className='dark-fab'; b.type='button'; b.title='מצב לילה / יום';
-  b.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
-  b.onclick=function(){
-    const on=document.body.classList.toggle('dark');
-    b.textContent = on ? '☀️' : '🌙';
-    try{localStorage.setItem('guide_dark_'+(location.pathname||'app'), on?'1':'0')}catch(e){}
-  };
-  document.body.appendChild(b);
-})();
-
-/* ===== מה עושים היום (synced) ===== */
-
-/* prefer showing one nearby day-trip when weather is good */
-function pickDaytripSuggestion(wd, rainy, hot, cold){
-  try{
-    const sites = (typeof SITES!=='undefined') ? SITES : [];
-    const trips = sites.filter(s => s.cat==='daytrip' || s.daytrip===true || (s.tags&&s.tags.includes('daytrip')));
-    if(!trips.length) return null;
-    // avoid daytrips on very rainy/hot days
-    if(rainy || hot) return null;
-    // prefer higher prio
-    trips.sort((a,b)=>(b.prio||b.priority||5)-(a.prio||a.priority||5));
-    return trips[0];
-  }catch(e){ return null; }
-}
-
-function todayModal(){
-  try{
-    const iso = (typeof todayISO==='function') ? todayISO() : new Date().toISOString().slice(0,10);
-    const wd = (typeof dow==='function') ? dow(iso) : new Date(iso+'T12:00:00').getDay();
-    let w = null;
-    if(typeof wxFor==='function') w = wxFor(iso);
-    else if(typeof WX!=='undefined' && WX && WX.days) w = WX.days.find(d=>d.date===iso || d.day===iso);
-    else if(typeof WXD!=='undefined' && WXD && WXD.days) w = WXD.days.find(d=>d.date===iso);
-    const code = w ? (w.code || w.weathercode || w.wcode) : null;
-    const rainy = code != null && isRainyCode(code);
-    const hot = isHotDay(w, null);
-    const cold = isColdDay(w);
-    let wem='🌡️', wdsc='';
-    if(typeof WMO==='function' && code!=null){ const r=WMO(code); if(Array.isArray(r)){wem=r[0]||wem;wdsc=r[1]||'';} }
-    const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-    let html = `<div style="padding:10px;border-radius:12px;background:var(--card,#f8f8f8);margin-bottom:10px"><b>${days[wd]||''} · ${iso}</b>`;
-    if(w) html += `<div style="margin-top:4px">${wem} ${wdsc} · ${Math.round(w.max||w.tempmax||0)}°/${Math.round(w.min||w.tempmin||0)}°${w.pop!=null?' · 💧'+w.pop+'%':''}</div>`;
-    html += `</div>`;
-    const adv=[];
-    if(rainy) adv.push('☔ צפוי גשם – העדיפו אתרים מקורים. קחו מטרייה.');
-    if(hot) adv.push('🥵 חם – בוקר מוקדם בחוץ, צהריים במקום ממוזג, שתו הרבה.');
-    if(cold) adv.push('🧥 קר – התלבשו בשכבות ושלבו אתרים מקורים.');
-    if(!rainy && !hot && !cold && w) adv.push('🌤️ מזג אוויר נוח – מומלץ לנצל לטיול בחוץ.');
-    if(adv.length) html += `<div style="padding:8px 10px;background:#fff8e6;border-radius:10px;margin-bottom:10px;color:#5c4a1a">${adv.join('<br>')}</div>`;
-
-    const sites = (typeof SITES!=='undefined') ? SITES : (typeof sites!=='undefined' ? sites : []);
-    const open = sites.filter(s => !(s.closed && (s.closed.includes(wd) || s.closed.includes(String(wd)))));
-    const score = s => {
-      let v = (s.prio || s.priority || 5);
-      if(rainy||cold) v += s.indoor ? 6 : -4;
-      else if(hot) v += s.indoor ? 3 : -2;
-      else v += s.indoor ? -1 : 2;
-      return v;
-    };
-    const ranked = [...open].sort((a,b)=>score(b)-score(a)).slice(0,4);
-    html += `<h4 style="margin:12px 0 6px">המלצות להיום</h4>`;
-    const dtSug = pickDaytripSuggestion(wd, rainy, hot, cold);
-    if(dtSug){
-      html += `<div style="display:flex;gap:8px;align-items:center;padding:8px;border:1px dashed #3b82f6;border-radius:10px;margin-bottom:8px;background:#eff6ff">
-        <b style="min-width:70px">🚆 טיול יום</b>
-        <div style="flex:1"><b>${dtSug.he||dtSug.name||dtSug.title||dtSug.id}</b><br><small style="color:var(--muted,#666)">אטרקציה מחוץ לעיר / בקרבתה · ${dtSug.short||dtSug.why||'מומלץ כשמזג האוויר מאפשר'}</small></div>
-      </div>`;
-    }
-
-    const labels = ['🌅 בוקר','☀️ צהריים','🌇 אחה״צ','🌙 ערב'];
-    ranked.forEach((s,i)=>{
-      html += `<div style="display:flex;gap:8px;align-items:center;padding:8px;border:1px solid var(--line,#ddd);border-radius:10px;margin-bottom:6px;background:var(--card,#fff)">
-        <b style="min-width:70px">${labels[i]||''}</b>
-        <div style="flex:1"><b>${s.he||s.name||s.title||s.id||''}</b><br><small style="color:var(--muted,#666)">${s.short||s.why||s.desc||''}</small></div>
-      </div>`;
-    });
-    if(!ranked.length) html += `<p style="color:var(--muted,#666)">אין מספיק נתונים להמלצות אוטומטיות כרגע.</p>`;
-
-    let ov = document.getElementById('today-ov');
-    if(!ov){ ov=document.createElement('div'); ov.id='today-ov'; ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center'; document.body.appendChild(ov); }
-    ov.innerHTML = `<div style="background:var(--bg,#fff);color:var(--ink,#111);width:100%;max-width:520px;max-height:85vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><b>מה עושים היום</b><button type="button" onclick="this.closest('#today-ov').remove()" style="font-size:20px;background:none;border:0;cursor:pointer">✕</button></div>
-      ${html}
-    </div>`;
-    ov.onclick = e => { if(e.target===ov) ov.remove(); };
-  }catch(e){ console.error(e); alert('שגיאה בטעינת המלצות היום'); }
-}
-
-(function(){
-  if(document.querySelector('.today-fab')) return;
-  const b=document.createElement('button');
-  b.className='today-fab'; b.type='button'; b.title='מה עושים היום';
-  b.textContent='🗓️';
-  b.style.cssText='position:fixed;bottom:18px;left:70px;z-index:950;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#1e3a5f,#0f172a);color:#93c5fd;font-size:18px;border:2px solid #93c5fd;box-shadow:0 4px 14px rgba(0,0,0,.35);cursor:pointer;display:flex;align-items:center;justify-content:center';
-  b.onclick=function(){ if(typeof todayModal==='function') todayModal(); };
-  document.body.appendChild(b);
-})();
-
-/* ===== Route day weather warnings (synced feature) ===== */
-function getRouteWeatherBanner(iso){
-  try{
-    if(!iso) return '';
-    let w = null;
-    if(typeof wxFor==='function') w = wxFor(iso);
-    else if(typeof WX!=='undefined' && WX && WX.days) w = WX.days.find(d => d.date===iso || d.day===iso);
-    else if(typeof WXD!=='undefined' && WXD && WXD.days) w = WXD.days.find(d => d.date===iso);
-    if(!w) return '';
-    const code = w.code || w.weathercode || w.wcode;
-    const rainy = (typeof isRainyCode==='function') ? isRainyCode(code) : ((code>=51&&code<=67)||(code>=80&&code<=99));
-    const hot = (w.max||w.tempmax||0) >= 31;
-    const cold = (w.max||w.tempmax||0) <= 10;
-    const pop = w.pop != null ? w.pop : null;
-    const parts = [];
-    if(rainy || (pop!=null && pop>=60)) parts.push('☔ גשם צפוי – העדיפו מקורים / קחו מטרייה');
-    else if(pop!=null && pop>=40) parts.push('🌦️ סיכוי לגשם ('+pop+'%)');
-    if(hot) parts.push('🥵 חם מאוד – התחילו מוקדם, שתו הרבה, הפסקה בצהריים');
-    if(cold) parts.push('🧥 קר – התלבשו בשכבות');
-    if(!parts.length){
-      const mx = Math.round(w.max||w.tempmax||0), mn = Math.round(w.min||w.tempmin||0);
-      return `<div class="route-wx ok" style="font-size:13px;padding:6px 10px;margin:6px 0;border-radius:8px;background:#e8f5e9;color:#1b5e20">🌤️ ${mx}°/${mn}° – מזג אוויר נוח לטיול</div>`;
-    }
-    return `<div class="route-wx warn" style="font-size:13px;padding:6px 10px;margin:6px 0;border-radius:8px;background:#fff3e0;color:#e65100;border:1px solid #ffcc80">${parts.join(' · ')}</div>`;
-  }catch(e){ return ''; }
-}
-
-/** Try to enhance existing day headers when routes are shown */
-function enhanceRouteDaysWithWeather(){
-  try{
-    document.querySelectorAll('[data-day-iso], .day[data-date], .day-chip[data-iso], .dayh, .day-header').forEach(el=>{
-      if(el.querySelector('.route-wx')) return;
-      const iso = el.getAttribute('data-day-iso') || el.getAttribute('data-date') || el.getAttribute('data-iso');
-      if(!iso) return;
-      const banner = getRouteWeatherBanner(iso);
-      if(banner) el.insertAdjacentHTML('beforeend', banner);
-    });
-  }catch(e){}
-}
-
-/* auto-enhance route days when DOM updates */
-(function(){
-  let t=null;
-  const run=()=>{ try{ if(typeof enhanceRouteDaysWithWeather==='function') enhanceRouteDaysWithWeather(); }catch(e){} };
-  const obs=new MutationObserver(()=>{ clearTimeout(t); t=setTimeout(run, 400); });
-  if(document.body) obs.observe(document.body, {childList:true, subtree:true});
-  setTimeout(run, 1500);
-})();
-
-/* ===== Unified personal pack helpers (synced) ===== */
-function exportPersonalPack(){
-  try{
-    const pack = {
-      v: 1,
-      app: (typeof CITY!=='undefined' && CITY.title) ? CITY.title : (document.title||'guide'),
-      ts: new Date().toISOString(),
-      data: {}
-    };
-    // collect common localStorage keys
-    for(let i=0;i<localStorage.length;i++){
-      const k = localStorage.key(i);
-      if(!k) continue;
-      if(/route|fav|note|rate|rating|hidden|pref|custom|hotel|my|personal|S\.|guide_/i.test(k)){
-        try{ pack.data[k] = JSON.parse(localStorage.getItem(k)); }
-        catch(e){ pack.data[k] = localStorage.getItem(k); }
-      }
-    }
-    const json = JSON.stringify(pack, null, 2);
-    const blob = new Blob([json], {type:'application/json'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = (pack.app||'guide').replace(/\s+/g,'_') + '_backup.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
-    if(typeof toast==='function') toast('הורדת גיבוי');
-    else alert('הקובץ הורד');
-  }catch(e){ console.error(e); alert('שגיאה בייצוא'); }
-}
-function importPersonalPack(file){
-  const reader = new FileReader();
-  reader.onload = () => {
-    try{
-      const pack = JSON.parse(reader.result);
-      if(!pack || !pack.data) throw new Error('פורמט לא תקין');
-      Object.keys(pack.data).forEach(k=>{
-        try{ localStorage.setItem(k, typeof pack.data[k]==='string' ? pack.data[k] : JSON.stringify(pack.data[k])); }
-        catch(e){}
-      });
-      if(typeof toast==='function') toast('שוחזר – מרענן…');
-      setTimeout(()=>location.reload(), 600);
-    }catch(e){ alert('לא ניתן לשחזר: '+e.message); }
-  };
-  reader.readAsText(file);
-}
-
-(function(){
-  if(document.querySelector('.backup-fab')) return;
-  const b=document.createElement('button');
-  b.className='backup-fab'; b.type='button'; b.title='גיבוי מצב אישי';
-  b.textContent='💾';
-  b.style.cssText='position:fixed;bottom:18px;left:122px;z-index:950;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#14532d,#052e16);color:#86efac;font-size:18px;border:2px solid #86efac;box-shadow:0 4px 14px rgba(0,0,0,.35);cursor:pointer;display:flex;align-items:center;justify-content:center';
-  b.onclick=function(){ if(typeof exportPersonalPack==='function') exportPersonalPack(); };
-  document.body.appendChild(b);
-  // hidden file input for restore – long-press or double-click could be used; for now export only via FAB
-})();
-
-/* highlight daytrips when listing sites */
-function daytripBadge(s){
-  if(!s) return '';
-  if(s.cat==='daytrip' || s.daytrip===true || (s.area&&String(s.area).includes('טיול')) || (s.tags&&s.tags.includes&&s.tags.includes('daytrip')))
-    return '<span style="background:#dbeafe;color:#1e40af;padding:2px 6px;border-radius:6px;font-size:11px;margin-right:4px">🚆 מחוץ לעיר</span>';
-  return '';
-}
 </script>
+<script id="guide-dark-js">
+(function(){
+  var k='guide_dark_v3';
+  function apply(on){
+    document.documentElement.classList.toggle('dark',!!on);
+    if(document.body) document.body.classList.toggle('dark',!!on);
+    try{localStorage.setItem(k,on?'1':'0');}catch(e){}
+    var b=document.querySelector('.dark-fab');
+    if(b) b.textContent=on?'☀️':'🌙';
+  }
+  function mount(){
+    if(document.querySelector('.dark-fab')) return;
+    var b=document.createElement('button');
+    b.className='dark-fab'; b.type='button'; b.title='מצב לילה'; b.textContent='🌙';
+    b.style.cssText='position:fixed;bottom:18px;left:18px;z-index:9999;width:44px;height:44px;border-radius:50%;background:#1e293b;color:#fff;font-size:18px;border:2px solid #fbbf24;box-shadow:0 4px 14px rgba(0,0,0,.35);cursor:pointer';
+    b.onclick=function(){apply(!(document.body&&document.body.classList.contains('dark')));};
+    document.body.appendChild(b);
+    try{if(localStorage.getItem(k)==='1')apply(true);}catch(e){}
+  }
+  if(document.body) mount(); else document.addEventListener('DOMContentLoaded',mount);
+})();
+</script>
+
+<script id="guide-features-js">
+(function(){
+  function todayISO(){try{return new Date().toISOString().slice(0,10);}catch(e){return '';}}
+  function showToday(){
+    var ov=document.getElementById('guideFeatureOverlay');
+    if(!ov){
+      ov=document.createElement('div'); ov.id='guideFeatureOverlay';
+      ov.style.cssText='display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;align-items:center;justify-content:center;padding:12px';
+      ov.onclick=function(e){if(e.target===ov)ov.style.display='none';};
+      document.body.appendChild(ov);
+    }
+    var days=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+    var d=new Date();
+    ov.innerHTML='<div style="background:#fff;color:#111;width:100%;max-width:480px;max-height:85vh;overflow:auto;border-radius:16px;padding:16px;direction:rtl"><div style="display:flex;justify-content:space-between;align-items:center"><b>מה עושים היום?</b><button type="button" id="gfoClose" style="border:0;background:transparent;font-size:20px;cursor:pointer">✕</button></div><p style="margin:8px 0;color:#666">יום '+days[d.getDay()]+' · '+todayISO()+'</p><p style="font-size:14px;line-height:1.5">בדקו מזג אוויר מקומי. העדיפו אתרים מקורים אם גשום. טיולי יום מחוץ לעיר — כשהמזג מאפשר.</p></div>';
+    ov.style.display='flex';
+    var cl=document.getElementById('gfoClose');
+    if(cl) cl.onclick=function(){ov.style.display='none';};
+  }
+  function exportPack(){
+    try{
+      var data={v:1,exported:new Date().toISOString(),path:location.pathname,storage:{}};
+      for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i); if(k) data.storage[k]=localStorage.getItem(k);}
+      var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+      var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='travel-guide-backup.json'; a.click();
+      setTimeout(function(){URL.revokeObjectURL(a.href);},1500);
+    }catch(e){alert('גיבוי נכשל');}
+  }
+  function addFab(cls,label,title,left,bg,border,fn){
+    if(document.querySelector('.'+cls)) return;
+    var b=document.createElement('button');
+    b.className=cls; b.type='button'; b.title=title; b.textContent=label;
+    b.style.cssText='position:fixed;bottom:18px;left:'+left+';z-index:9998;width:44px;height:44px;border-radius:50%;background:'+bg+';color:#fff;font-size:16px;border:2px solid '+border+';box-shadow:0 4px 14px rgba(0,0,0,.35);cursor:pointer';
+    b.onclick=fn; document.body.appendChild(b);
+  }
+  function mount(){
+    addFab('today-fab','🗓️','מה עושים היום','70px','#1d4ed8','#93c5fd',showToday);
+    addFab('backup-fab','💾','גיבוי אישי','122px','#047857','#86efac',exportPack);
+  }
+  window.GuideFeatures={showToday:showToday,exportPack:exportPack};
+  if(document.body) mount(); else document.addEventListener('DOMContentLoaded',mount);
+})();
+</script>
+
 </body>
 </html>
